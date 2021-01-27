@@ -1,0 +1,33 @@
+dataset: summer2winter_yosemite
+
+data_loader:
+  name: GENERATOR
+  crop: True
+  before_crop_size: [286, 286]
+  normalize: True
+  target_size: [256, 256, 3]
+
+
+data_paths:
+  extension: .jpg
+  shuffle: True
+
+paths:
+  data:
+    train_A: data/{{dataset}}/trainA
+    train_B: data/{{dataset}}/trainB
+    test_A: data/{{dataset}}/testA
+    test_B: data/{{dataset}}/testB
+  checkpoint: checkpoints/train
+
+model:
+  input_dim: [256, 256, 3]
+  learning_rate: 0.0002
+  cycle_loss_lambda: 10.0
+  enable_identity_loss: True
+  gan_loss_criterion: mean_squared_error
+
+training:
+  epochs: 30
+  frequency_checkpoints: 1
+  max_checkpoints: 5

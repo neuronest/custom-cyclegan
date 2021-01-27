@@ -1,0 +1,5 @@
+.idea
+.env
+notebooks
+*.pyc
+.DS_Store

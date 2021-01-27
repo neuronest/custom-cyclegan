@@ -1,0 +1,8 @@
+black==20.8b1
+matplotlib==3.3.3
+numpy==1.19.5
+pre-commit==2.9.3
+python-box==5.2.0
+tensorflow==2.4.1
+tensorflow-datasets==4.2.0
+tensorflow-addons==0.12.0
