@@ -15,12 +15,29 @@ class GanLossCriterion(Enum):
     MEAN_SQUARED_ERROR = "mean_squared_error"
 
 
-def gan_loss(
+def generator_gan_loss(
+    criterion: GanLossCriterion,
+    discriminator_generation: tf.Tensor,
+):
+    if criterion is GanLossCriterion.NEGATIVE_LOG_LIKELIHOOD:
+        criterion_loss = binary_crossentropy
+    elif criterion is GanLossCriterion.MEAN_SQUARED_ERROR:
+        criterion_loss = mean_squared_error
+    else:
+        raise NotImplementedError
+    return -tf.reduce_mean(
+        criterion_loss(
+            discriminator_generation,
+            tf.zeros(discriminator_generation.shape),
+        )
+    )
+
+
+def discriminator_gan_loss(
     criterion: GanLossCriterion,
     discriminator_generation: tf.Tensor,
     discriminator_real: tf.Tensor,
-    exclude_discriminator_term: bool,
-) -> tf.Tensor:
+):
     if criterion is GanLossCriterion.NEGATIVE_LOG_LIKELIHOOD:
         criterion_loss = binary_crossentropy
     elif criterion is GanLossCriterion.MEAN_SQUARED_ERROR:
@@ -33,8 +50,6 @@ def gan_loss(
             tf.zeros(discriminator_generation.shape),
         )
     )
-    if exclude_discriminator_term:
-        return generator_term
     return generator_term + tf.reduce_mean(
         criterion_loss(
             discriminator_real,
@@ -70,11 +85,11 @@ def get_generators_losses(
     (
         image_A_reconstructed,
         discriminator_A_generation,
-        discriminator_A_real,
+        _,
         image_A_identity,
         image_B_reconstructed,
         discriminator_B_generation,
-        discriminator_B_real,
+        _,
         image_B_identity,
     ) = forward_outputs
     cycle_loss_all = cycle_loss(
@@ -83,17 +98,13 @@ def get_generators_losses(
         image_A_reconstructed=image_A_reconstructed,
         image_B_reconstructed=image_B_reconstructed,
     )
-    gan_loss_A = gan_loss(
+    gan_loss_A = generator_gan_loss(
         criterion=gan_loss_criterion,
         discriminator_generation=discriminator_A_generation,
-        discriminator_real=discriminator_A_real,
-        exclude_discriminator_term=True,
     )
-    gan_loss_B = gan_loss(
+    gan_loss_B = generator_gan_loss(
         criterion=gan_loss_criterion,
         discriminator_generation=discriminator_B_generation,
-        discriminator_real=discriminator_B_real,
-        exclude_discriminator_term=True,
     )
     generator_loss_A = gan_loss_A + tf.constant(cycle_loss_lambda) * cycle_loss_all
     generator_loss_B = gan_loss_B + tf.constant(cycle_loss_lambda) * cycle_loss_all
@@ -121,17 +132,15 @@ def get_discriminators_losses(
         discriminator_B_real,
         _,
     ) = forward_outputs
-    discriminator_loss_A = gan_loss(
+    discriminator_loss_A = discriminator_gan_loss(
         criterion=gan_loss_criterion,
         discriminator_generation=discriminator_A_generation,
         discriminator_real=discriminator_A_real,
-        exclude_discriminator_term=False,
     )
-    discriminator_loss_B = gan_loss(
+    discriminator_loss_B = discriminator_gan_loss(
         criterion=gan_loss_criterion,
         discriminator_generation=discriminator_B_generation,
         discriminator_real=discriminator_B_real,
-        exclude_discriminator_term=False,
     )
     return discriminator_loss_A, discriminator_loss_B
 
