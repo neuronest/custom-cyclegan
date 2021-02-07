@@ -2,8 +2,9 @@ import inspect
 import os
 import sys
 from abc import ABC, abstractmethod
+from itertools import cycle
 from functools import partial
-from typing import Sequence, Tuple, Optional
+from typing import Sequence, Tuple, Union, Optional
 
 import numpy as np
 import tensorflow as tf
@@ -35,9 +36,13 @@ class DataPaths:
         if self.shuffle:
             np.random.shuffle(self.paths_A)
             np.random.shuffle(self.paths_B)
+        self.length = min(len(self.paths_A), len(self.paths_B))
+
+    def __len__(self) -> int:
+        return self.length
 
     def __iter__(self) -> "DataPaths":
-        self.paths_A, self.paths_B = iter(self.paths_A), iter(self.paths_B)
+        self.paths_A, self.paths_B = cycle(self.paths_A), cycle(self.paths_B)
         return self
 
     def __next__(self) -> Tuple[str, str]:
@@ -53,14 +58,14 @@ class ImageDataLoader(ABC):
         data_paths: DataPaths,
         target_size: Tuple[int, ...],
         crop: bool,
-        normalize: bool,
+        enable_normalization: bool,
         before_crop_size: Optional[Tuple[int, ...]],
         interpolation: str,
     ):
         self.data_paths = data_paths
         self.target_size = target_size
         self.crop = crop
-        self.normalize = normalize
+        self.enable_normalization = enable_normalization
         self.before_crop_size = before_crop_size
         self.interpolation = interpolation
         if self.crop:
@@ -69,6 +74,9 @@ class ImageDataLoader(ABC):
             self.inner_loader = partial(
                 load_img, target_size=target_size, interpolation=interpolation
             )
+
+    def __len__(self) -> int:
+        return len(self.data_paths)
 
     @abstractmethod
     def __iter__(self) -> "ImageDataLoader":
@@ -82,12 +90,30 @@ class ImageDataLoader(ABC):
     def __next__(self) -> Tuple[tf.Tensor, tf.Tensor]:
         raise NotImplementedError
 
+    @staticmethod
+    def normalize(image: np.ndarray) -> np.ndarray:
+        return (image / 127.5) - 1
+
+    @staticmethod
+    def denormalize(image: np.ndarray) -> np.ndarray:
+        return (image + 1) * 127.5
+
+    def next_batch(
+        self, n: int, as_tensors: bool = False
+    ) -> Tuple[Union[np.ndarray, tf.Tensor], Union[np.ndarray, tf.Tensor]]:
+        batch_A, batch_B = np.array([next(self) for _ in range(n)]).swapaxes(0, 1)
+        if as_tensors:
+            batch_A, batch_B = tf.convert_to_tensor(batch_A), tf.convert_to_tensor(
+                batch_B
+            )
+        return batch_A, batch_B
+
     def preprocess(self, image: np.ndarray) -> np.ndarray:
         if self.crop:
             assert self.before_crop_size is not None
             resize(image, self.before_crop_size, method=self.interpolation)
             random_crop(image, size=self.target_size)
-        if self.normalize:
+        if self.enable_normalization:
             image = (image / 127.5) - 1
         return image.astype("float32")
 
@@ -100,7 +126,7 @@ class MemoryDataLoader(ImageDataLoader):
         data_paths: DataPaths,
         target_size: Tuple[int, ...],
         crop: bool,
-        normalize: bool,
+        enable_normalization: bool,
         before_crop_size: Optional[Tuple[int, ...]],
         interpolation: str,
     ):
@@ -108,7 +134,7 @@ class MemoryDataLoader(ImageDataLoader):
             data_paths,
             target_size,
             crop,
-            normalize,
+            enable_normalization,
             before_crop_size,
             interpolation,
         )
@@ -146,7 +172,7 @@ class GeneratorDataLoader(ImageDataLoader):
         data_paths: DataPaths,
         target_size: Tuple[int, ...],
         crop: bool,
-        normalize: bool,
+        enable_normalization: bool,
         before_crop_size: Tuple[int, ...],
         interpolation: str,
     ):
@@ -154,7 +180,7 @@ class GeneratorDataLoader(ImageDataLoader):
             data_paths,
             target_size,
             crop,
-            normalize,
+            enable_normalization,
             before_crop_size,
             interpolation,
         )
@@ -192,7 +218,7 @@ class DataLoaderFactory:
         data_paths: DataPaths,
         target_size: Sequence[int],
         crop: bool,
-        normalize: bool,
+        enable_normalization: bool,
         before_crop_size: Optional[Sequence[int]] = None,
         interpolation: str = "bicubic",
     ) -> ImageDataLoader:
@@ -200,7 +226,7 @@ class DataLoaderFactory:
             data_paths=data_paths,
             target_size=tuple(target_size),
             crop=crop,
-            normalize=normalize,
+            enable_normalization=enable_normalization,
             before_crop_size=tuple(before_crop_size) if before_crop_size else None,
             interpolation=interpolation,
         )

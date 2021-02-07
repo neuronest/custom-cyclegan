@@ -4,7 +4,7 @@ data_loader:
   name: GENERATOR
   crop: True
   before_crop_size: [286, 286]
-  normalize: True
+  enable_normalization: True
   target_size: [256, 256, 3]
 
 
@@ -19,6 +19,7 @@ paths:
     test_A: data/{{dataset}}/testA
     test_B: data/{{dataset}}/testB
   checkpoint: checkpoints/train
+  tensorboard: tensorboard
 
 model:
   input_dim: [256, 256, 3]
@@ -31,3 +32,7 @@ training:
   epochs: 30
   frequency_checkpoints: 1
   max_checkpoints: 5
+
+logging:
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  level: DEBUG
