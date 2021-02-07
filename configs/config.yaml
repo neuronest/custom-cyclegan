@@ -29,8 +29,9 @@ model:
   gan_loss_criterion: mean_squared_error
 
 training:
-  epochs: 30
+  epochs: 500
   frequency_checkpoints: 1
+  example_images_number_checkpoint: 5
   max_checkpoints: 5
 
 logging:
