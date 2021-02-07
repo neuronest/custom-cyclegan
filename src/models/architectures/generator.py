@@ -1,5 +1,3 @@
-import json
-import os.path as op
 from typing import Tuple
 
 import numpy as np
@@ -21,6 +19,7 @@ class Generator:
         self,
         input_dim: Tuple[int, ...],
         learning_rate: float,
+        adam_beta_1: float,
         minimum_filters: int = 64,
         residual_filter: int = 256,
         residual_number: int = 9,
@@ -28,11 +27,12 @@ class Generator:
     ):
         self.input_dim = input_dim
         self.learning_rate = learning_rate
+        self.adam_beta_1 = adam_beta_1
         self.minimum_filters = minimum_filters
         self.residual_filter = residual_filter
         self.residual_number = residual_number
         self.final_filters = final_filters
-        self.optimizer = Adam(self.learning_rate)
+        self.optimizer = Adam(self.learning_rate, beta_1=self.adam_beta_1)
         self.initial_layer = ConvolutionBlock(
             filters=minimum_filters,
             kernel_size=7,

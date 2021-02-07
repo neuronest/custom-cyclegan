@@ -14,6 +14,7 @@ class CycleGAN:
         self,
         input_dim: Tuple[int, ...],
         learning_rate: float,
+        adam_beta_1: float,
         gan_loss_criterion: str,
         checkpoint_path: str,
         max_checkpoints: int,
@@ -23,13 +24,19 @@ class CycleGAN:
     ):
         self.input_dim = input_dim
         self.learning_rate = learning_rate
+        self.adam_beta_1 = adam_beta_1
         self.gan_loss_criterion = GanLossCriterion(gan_loss_criterion)
         self.cycle_loss_lambda = cycle_loss_lambda
         self.enable_identity_loss = enable_identity_loss
-        self.G = Generator(input_dim=input_dim, learning_rate=learning_rate)
-        self.F = Generator(input_dim=input_dim, learning_rate=learning_rate)
-        self.DA = Discriminator(input_dim=input_dim, learning_rate=learning_rate)
-        self.DB = Discriminator(input_dim=input_dim, learning_rate=learning_rate)
+        networks_parameters = dict(
+            input_dim=self.input_dim,
+            learning_rate=self.learning_rate,
+            adam_beta_1=self.adam_beta_1,
+        )
+        self.G = Generator(**networks_parameters)
+        self.F = Generator(**networks_parameters)
+        self.DA = Discriminator(**networks_parameters)
+        self.DB = Discriminator(**networks_parameters)
         self.checkpoint, self.checkpoint_manager = self.init_checkpoint(
             checkpoint_path, max_checkpoints
         )

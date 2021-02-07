@@ -13,12 +13,14 @@ class Discriminator:
         self,
         input_dim: Tuple[int, ...],
         learning_rate: float,
+        adam_beta_1: float,
         minimum_filters: int = 64,
         maximal_filters: int = 512,
     ):
         self.input_dim = input_dim
         self.learning_rate = learning_rate
-        self.optimizer = Adam(self.learning_rate)
+        self.adam_beta_1 = adam_beta_1
+        self.optimizer = Adam(self.learning_rate, beta_1=self.adam_beta_1)
         self.convolutional_layers = [
             ConvolutionBlock(
                 filters=filters,

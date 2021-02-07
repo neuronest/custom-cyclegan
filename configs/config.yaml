@@ -24,6 +24,7 @@ paths:
 model:
   input_dim: [256, 256, 3]
   learning_rate: 0.0002
+  adam_beta_1: 0.5
   cycle_loss_lambda: 10.0
   enable_identity_loss: False
   gan_loss_criterion: mean_squared_error
