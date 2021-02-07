@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import (
     Layer,
     Conv2D,
-    Conv2DTranspose,
+    UpSampling2D,
     Activation,
     ZeroPadding2D,
     add,
@@ -41,7 +41,6 @@ class ConvolutionBlock(Layer):
         padding_layer: Optional[Callable] = None,
         padding: Optional[int] = None,
         instance_normalization: bool = True,
-        transpose_convolution: bool = False,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -49,17 +48,9 @@ class ConvolutionBlock(Layer):
             self.reflexion_padding_layer = padding_layer(padding=padding)
         else:
             self.reflexion_padding_layer = None
-        if transpose_convolution:
-            self.convolution_layer = Conv2DTranspose(
-                filters=filters,
-                kernel_size=kernel_size,
-                strides=strides,
-                padding="same",
-            )
-        else:
-            self.convolution_layer = Conv2D(
-                filters=filters, kernel_size=kernel_size, strides=strides
-            )
+        self.convolution_layer = Conv2D(
+            filters=filters, kernel_size=kernel_size, strides=strides
+        )
         if instance_normalization:
             self.instance_normalization_layer = InstanceNormalization(axis=3)
         else:
@@ -96,15 +87,21 @@ class DownsamplingBlock(ConvolutionBlock):
 
 class UpsamplingBlock(ConvolutionBlock):
     def __init__(self, filters: int, **kwargs):
+        # https://distill.pub/2016/deconv-checkerboard/
         super().__init__(
             filters,
             kernel_size=3,
-            strides=2,
+            strides=1,
             activation="relu",
+            padding_layer=ReflectionPadding2D,
+            padding=1,
             instance_normalization=True,
-            transpose_convolution=True,
             **kwargs
         )
+        self.upsampling_layer = UpSampling2D(size=(2, 2))
+
+    def call(self, inputs, training=False):
+        return super().call(self.upsampling_layer(inputs))
 
 
 class ResidualBlock(Layer):
