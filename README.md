@@ -21,6 +21,13 @@ source install.sh
 tensorboard --port 6006 --logdir tensorboard
 ```
 
+Note: TensorBoard internally restricts to **10** the number of distinct images displayed per tag. <br>
+You can work around this limitation by adding the `--samples_per_plugin images=n` argument, with `n` a higher number, analogous to the maximum number of epochs. <br>
+For example: 
+```bash
+tensorboard --port 6006 --logdir tensorboard --samples_per_plugin images=500
+```
+
 # Run a training experiment
 
 ```bash
