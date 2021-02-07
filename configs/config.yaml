@@ -27,6 +27,7 @@ model:
   cycle_loss_lambda: 10.0
   enable_identity_loss: False
   gan_loss_criterion: mean_squared_error
+  generated_images_buffer_size: 50
 
 training:
   epochs: 500

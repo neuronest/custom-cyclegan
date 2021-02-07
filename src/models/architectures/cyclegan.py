@@ -1,3 +1,5 @@
+import random
+from collections import deque
 from typing import Tuple
 
 import tensorflow as tf
@@ -15,6 +17,7 @@ class CycleGAN:
         gan_loss_criterion: str,
         checkpoint_path: str,
         max_checkpoints: int,
+        generated_images_buffer_size: int,
         cycle_loss_lambda: float = 1e1,
         enable_identity_loss: bool = False,
     ):
@@ -30,6 +33,7 @@ class CycleGAN:
         self.checkpoint, self.checkpoint_manager = self.init_checkpoint(
             checkpoint_path, max_checkpoints
         )
+        self.generated_images_buffer = deque([], maxlen=generated_images_buffer_size)
 
     def init_checkpoint(
         self, checkpoint_path: str, max_checkpoints: int
@@ -51,10 +55,20 @@ class CycleGAN:
 
     def forward(self, image_A: tf.Tensor, image_B: tf.Tensor) -> Tuple[tf.Tensor, ...]:
         image_A_generated, image_B_generated = self.F(image_B), self.G(image_A)
+        image_A_identity, image_B_identity = self.F(image_A), self.G(image_B)
         image_A_reconstructed, image_B_reconstructed = (
             self.F(image_B_generated),
             self.G(image_A_generated),
         )
+        self.generated_images_buffer.append(
+            (image_A_generated, image_B_generated, image_A_identity, image_B_identity)
+        )
+        (
+            image_A_generated,
+            image_B_generated,
+            image_A_identity,
+            image_B_identity,
+        ) = random.choice(self.generated_images_buffer)
         discriminator_A_real, discriminator_B_real = (
             self.DA(image_A),
             self.DB(image_B),
@@ -63,7 +77,6 @@ class CycleGAN:
             self.DA(image_A_generated),
             self.DB(image_B_generated),
         )
-        image_A_identity, image_B_identity = self.F(image_A), self.G(image_B)
         return (
             image_A_reconstructed,
             discriminator_A_generation,
